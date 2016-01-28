@@ -1,11 +1,13 @@
-// import 'babel-polyfill';
 import 'blissfuljs';
-import { Observable } from 'rx';
-import { DOM } from 'rx-dom';
-import { comicEl, imageEl } from './dom';
+import comicElements from './dom/comicElements';
+import { DOM as DOMEvents } from 'rx-dom-events';
 
-// blissfuljs global
+// The blissfuljs mounted global.
 const { $ } = window;
+
+// Ensure our styles are bundled with the app.
+import 'normalize.css';
+import './styles.css';
 
 // The mounting point of our application.
 const $holding = $('.holding-app');
@@ -15,50 +17,31 @@ function appendChildren($parent, children) {
   $parent._.contents(children);
 }
 
+function dimensions(win) {
+  return {
+    w: win.innerWidth
+      || win.document.documentElement.clientWidth
+      || win.document.body.clientWidth,
+    h: win.innerHeight
+      || win.document.documentElement.clientHeight
+      || win.document.body.clientHeight
+  };
+}
+
+const windowDimension$ = DOMEvents.resize(window)
+  .map(e => dimensions(e.target))
+  .startWith(dimensions(window));
+
+windowDimension$.subscribe(x => console.log(x));
+
 /**
  * Get the current window pixel density. We'll default it to a
  * density of 2 for browsers that don't support this property.
  *
  * NOTE: not IE safe.
  */
-const pixelDensity$ = Observable.from([window.devicePixelRatio || 2]);
+const pixelDensity = window.devicePixelRatio || 2;
 
-const spritesSourceDataUrl$ = pixelDensity$
-  .map(p => {
-    let jsonFileName;
-
-    if (p > 1) {
-      jsonFileName = 'comics@2x';
-    } else {
-      jsonFileName = 'comics';
-    }
-
-    return `/assets/sprites/${jsonFileName}.json`;
-  });
-
-const spritesSourceData$ = spritesSourceDataUrl$
-  .flatMap(url => DOM.getJSON(url));
-
-const spriteUrl$ = spritesSourceData$
-  // Get the sprite urls.
-  .flatMap(data => data.spriteUrls)
-  // Pre-load each image by creating in-memory Image elements.
-  .flatMap(imageEl)
-  // Return the url for each of the loaded images.
-  .map(i => i.src);
-
-const imageCoords$ = spritesSourceData$
-  // get the image coordinates
-  .flatMap(data => data.imageCoords)
-  // convert the image coordinates to an array single observable result.
-  .toArray();
-
-const comicElement$ = Observable
-  .combineLatest(
-    [spriteUrl$, imageCoords$],
-    (url, coords) =>
-      coords.map(coord => comicEl(url, coord)));
+const comicElement$ = comicElements(pixelDensity);
 
 comicElement$.subscribe(x => appendChildren($holding, x));
-spriteUrl$.subscribe(x => console.dir(x));
-// imageCoords$.subscribe(x => console.dir(x));

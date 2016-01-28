@@ -1,4 +1,5 @@
 import webpack from 'webpack';
+import { cssModulesLoader } from './loaders';
 
 export default {
   // @see https://webpack.github.io/docs/configuration.html#devtool
@@ -14,5 +15,10 @@ export default {
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NoErrorsPlugin()
-  ]
+  ],
+  module: {
+    loaders: [
+      cssModulesLoader()
+    ]
+  }
 };

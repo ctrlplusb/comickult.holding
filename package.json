@@ -12,9 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "blissfuljs": "^1.0.0",
+    "normalize.css": "^3.0.3",
     "ramda": "^0.19.1",
     "rx": "^4.0.7",
-    "rx-dom": "^7.0.3"
+    "rx-dom": "^7.0.3",
+    "rx-dom-events": "^7.0.3"
   },
   "devDependencies": {
     "autoprefixer": "^6.3.1",
@@ -33,6 +35,7 @@
     "file-loader": "^0.8.5",
     "path": "^0.12.7",
     "postcss-loader": "^0.8.0",
+    "ramda": "^0.19.1",
     "style-loader": "^0.13.0",
     "url-loader": "^0.5.7",
     "webpack": "^1.12.12",

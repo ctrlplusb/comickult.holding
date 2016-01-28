@@ -1,0 +1,1 @@
+export cssModulesLoader from './cssModulesLoader';

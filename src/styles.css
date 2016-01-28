@@ -1,5 +1,18 @@
-.holding-app {
+.holdingApp {
   height: 100%;
+  overflow: hidden;
   position: relative;
   width: 100%;
+  z-index: 1;
+}
+
+.comicGrid {
+  position: absolute;
+  z-index: 2;
+}
+
+.comic {
+  border: solid 1px red;
+  position: absolute;
+  z-index: 3;
 }

@@ -1,5 +1,5 @@
 import webpack from 'webpack';
-import { cssModulesLoader } from './loaders';
+import { cssLoader } from './loaders';
 
 export default {
   // @see https://webpack.github.io/docs/configuration.html#devtool
@@ -18,7 +18,7 @@ export default {
   ],
   module: {
     loaders: [
-      cssModulesLoader()
+      cssLoader()
     ]
   }
 };

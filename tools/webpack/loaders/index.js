@@ -1,1 +1,1 @@
-export cssModulesLoader from './cssModulesLoader';
+export cssLoader from './cssLoader';

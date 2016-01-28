@@ -16,8 +16,8 @@ const cssModulesLoader = (development = true) => {
   if (development) {
     return merge(baseCssLoader, {
       loader: ExtractTextPlugin.extract(
-        'style-loader',
-        'css?sourceMap&modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss?sourceMap'
+        'style',
+        'css?sourceMap!postcss?sourceMap'
       )
     });
   }
@@ -25,7 +25,7 @@ const cssModulesLoader = (development = true) => {
   return merge(baseCssLoader, {
     loader: ExtractTextPlugin.extract(
       'style',
-      'css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss'
+      'css!postcss'
     )
   });
 };

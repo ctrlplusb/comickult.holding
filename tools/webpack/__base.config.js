@@ -12,11 +12,7 @@ export default {
     filename: 'holding.js'
   },
   resolve: {
-    extensions: ['', '.css', '.scss', '.js', '.json'],
-    modulesDirectories: [
-      'node_modules',
-      path.resolve(__dirname, '../../node_modules')
-    ]
+    extensions: ['', '.css', '.js', '.json']
   },
   plugins: [
     /**

@@ -1,6 +1,6 @@
 import 'normalize.css';
 import 'blissfuljs';
-import comics from './comics';
+import comics from './comics.js';
 
 // The blissfuljs mounted global.
 const { $ } = window;
@@ -13,4 +13,5 @@ const { $ } = window;
  */
 const pixelDensity = window.devicePixelRatio || 2;
 
-comics(window, $('.comicGrid'), pixelDensity);
+const comicContainer = $('.comicGrid');
+comics(window, comicContainer, pixelDensity);

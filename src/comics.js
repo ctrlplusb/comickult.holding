@@ -3,7 +3,7 @@ import { DOM } from 'rx-dom';
 import { DOM as DOMEvents } from 'rx-dom-events';
 import { shuffle } from './utils/array';
 
-import './styles.css';
+import './comics.css';
 
 // blissfuljs global
 const { $ } = window;
@@ -118,77 +118,95 @@ function adjustForPixelDensity(density, data) {
 }
 
 /**
- * Generates a grid definition based on the given window dimensions and
+ * Generates a grid specification based on the given window dimensions and
  * individual comic dimensions.
  *
  * @param  {Object} winDim   The window dimensions.
- * @param  {Object} comicDim The individual comic dimensions.
- * @return {Object}          The grid defintion.
+ * @param  {Object} cellDim The desired cell dimensions.
+ * @return {Object}          The grid specification.
  */
-function createGridDefintion(winDim, comicDim) {
-  const rowCount = Math.round(winDim.h / comicDim.h) + 2;
-  const colCount = Math.round(winDim.w / comicDim.w)
+function fullScreenGridSpec(winDim, cellDim) {
+  // We want our grid to take up the full display so we will add extra cols/rows
+  // to the grid in order to ensure that there will be no whitespace.  As a
+  // side effect of doing so we may need to negative offset our grid slightly
+  // so that the content is nicely centered.
+
+  // How many rows do we need?
+  const rowCount = Math.round(winDim.h / cellDim.h)
+      // we add an extra 2 rows always as it will help with any animation
+      // transisitions
+      + 2;
+
+  // How may columns do we need?
+  const colCount = Math.round(winDim.w / cellDim.w)
       // we add an extra column if there is a remainder on the column division.
-      + ((winDim.w % comicDim.w > 0) ? 1 : 0);
+      + ((winDim.w % cellDim.w > 0) ? 1 : 0);
+
+  // Calculate and return the grid total dimensions.
+  const dimensions = {
+    height: rowCount * cellDim.h,
+    width: colCount * cellDim.w
+  };
+
+  // Calculate the offset coordinates for the grid based on its extended size.
+  const offset = {
+    left: Math.round((dimensions.width - winDim.w) / 2) * -1,
+    top: Math.round((dimensions.height - winDim.h) / 2) * -1,
+  }
+
+  return {
+    dimensions,
+    offset,
+    cells: {
+      count: rowCount * colCount,
+      rowCount,
+      colCount,
+      dimensions: {
+        width: cellDim.w,
+        height: cellDim.h
+      }
+    }
+  };
+}
+
+// :: GridDefinition -> Observable [GridNodeElement]
+function gridCells(gridSpec) {
+  const {
+    offset: {
+      left: offsetLeft,
+      top: offsetTop
+    },
+    cells: {
+      rowCount,
+      colCount,
+      dimensions: {
+        width,
+        height
+      }
+    }
+  } = gridSpec;
 
   const gridElements = [];
 
   for (let r = 0; r < rowCount; r++)
   for (let c = 0; c < colCount; c++) {
-    const { w, h } = comicDim;
-    const left = c * w;
-    const top = r * h;
+    const left = (c * width) + offsetLeft;
+    const top = (r * height) + offsetTop;
 
     gridElements.push($.create('div', {
       className: 'comic',
       style: {
-        height: `${h}px`,
+        height: `${height}px`,
         left: `${left}px`,
         top: `${top}px`,
-        width: `${w}px`
+        width: `${width}px`
       }
     }));
   }
 
-  // calculate and return the grid definition
-  const dimensions = {
-    height: colCount * comicDim.w,
-    width: rowCount * comicDim.h
-  };
-  const coords = {
-    left: Math.round((dimensions.width - winDim.w) / 2) * -1,
-    top: Math.round((dimensions.height - winDim.h) / 2) * -1,
-  }
-  return {
-    dimensions,
-    coords,
-    // We return a shuffled set of the grid elements as this will allow us
-    // to mount the images in a "random" manner.
-    nodes: shuffle(gridElements)
-  };
-}
-
-/**
- * WARN: Side effects, renders into the given container.
- *
- * @param  {DomElement} $container The container to render in to.
- * @param  {Object} gridDefinition The grid definition.
- * @return {undefined}
- */
-function renderGrid($container, gridDefinition) {
-  const {
-    dimensions: { width, height },
-    coords: { top, left },
-    nodes } = gridDefinition;
-
-  $container._.style({
-    height: `${height}px`,
-    left: `${left}px`,
-    top: `${top}px`,
-    width: `${width}px`
-  });
-
-  $container._.children(nodes);
+  // We return a shuffled set of the grid elements as this will allow us
+  // to mount the images in a "random" manner.
+  return Observable.from(shuffle(gridElements));
 }
 
 export default function comics(win, $container, pixelDensity) {
@@ -235,17 +253,27 @@ export default function comics(win, $container, pixelDensity) {
     .map(e => dimensions(e.target))
     .startWith(dimensions(win));
 
-  const gridDefinition$ = Observable
+  const comicContainer$ = Observable
     .combineLatest(
       [ windowDimension$, imageDimension$ ],
-      createGridDefintion
+      fullScreenGridSpec
     )
-    .do(x => console.dir(x))
-    .share();
+    .flatMap(gridCells)
+    .do(x => console.dir(x));
 
-  gridDefinition$.subscribe(def =>
-    renderGrid($container, def)
-  );
+  /*
+  const animatedComicBackground = Observable
+    .combineLatest(
+      [ comicContainer$ ],
+      (comicContainer) => ({
+        comicContainer
+      })
+    )
+  */
+
+  comicContainer$.subscribe(comicContainer => {
+      $container._.contents(comicContainer);
+    });
 
   /*
   const comicElement$ = Observable

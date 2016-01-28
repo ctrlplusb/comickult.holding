@@ -10,6 +10,8 @@ const { $ } = window;
 
 function appendChildren($parent, children) {
   $parent._.contents(children);
+
+  return $parent;
 }
 
 let delayCount = 1;
@@ -31,14 +33,16 @@ function imageEl(imgUrl) {
     img.onError = (err) => {
       observer.onError(err);
     };
-  })
-  .delay(new Date(Date.now() + (1000 * delayCount)));
+  });
+  // NOTE: for dev testing
+  //.delay(new Date(Date.now() + (1000 * delayCount)));
 }
 
 // :: (Url, Dimensions, Coords) -> SpriteDomElement
-function comicEl(spriteUrl, spriteDimensions, imageCoords) {
-  const { w: sw, h: sh } = spriteDimensions;
-  const { x, y, w, h } = imageCoords;
+function comicEl(spriteUrl, spriteDimension, cellDimension, imageCoords) {
+  const { w: sw, h: sh } = spriteDimension;
+  const { x, y } = imageCoords;
+  const { w, h } = cellDimension;
 
   return $.create('div', {
     className: 'comic',
@@ -62,10 +66,6 @@ function dimensions(win) {
       || win.document.documentElement.clientHeight
       || win.document.body.clientHeight
   };
-}
-
-function calculateComicElements(url, dim, coords, density) {
-  return dxCoords.map(dxCoord => comicEl(url, dxDim, dxCoord));
 }
 
 /**
@@ -194,7 +194,7 @@ function gridCells(gridSpec) {
     const top = (r * height) + offsetTop;
 
     gridElements.push($.create('div', {
-      className: 'comic',
+      className: 'comicCell',
       style: {
         height: `${height}px`,
         left: `${left}px`,
@@ -207,6 +207,22 @@ function gridCells(gridSpec) {
   // We return a shuffled set of the grid elements as this will allow us
   // to mount the images in a "random" manner.
   return Observable.from(shuffle(gridElements));
+}
+
+function getEnoughSpriteUrls(spritesSourceData, requiredSpritesCount) {
+  const { spriteUrls: urls } = spritesSourceData;
+  const required = [];
+
+  while (required.length < requiredSpritesCount) {
+    for (let i = 0; i < urls.length; i++) {
+      required.push(urls[i]);
+      if (required.length === requiredSpritesCount) {
+        break;
+      }
+    }
+  }
+
+  return Observable.from(required);
 }
 
 export default function comics(win, $container, pixelDensity) {
@@ -226,62 +242,78 @@ export default function comics(win, $container, pixelDensity) {
     })
     .flatMap(url => DOM.getJSON(url))
     .map(data => adjustForPixelDensity(pixelDensity, data))
-    .do(x => console.dir(x))
     .share();
-
-  const sprite$ = spritesSourceData$
-    // Get the sprite urls.
-    .flatMap(data => data.spriteUrls)
-    // Fetch a sprite by creating in-memory Image elements.
-    .flatMap(imageEl)
-    // Return the url for the loaded sprite.
-    .map(i => i.src);
-
-  const spriteDimension$ = spritesSourceData$
-    .map(data => data.spriteDimension);
-
-  const imageDimension$ = spritesSourceData$
-    .map(data => data.imageDimension);
-
-  const imageCoords$ = spritesSourceData$
-    // get the image coordinates
-    .flatMap(data => data.imageCoords)
-    // convert the image coordinates to an array single observable result.
-    .toArray();
 
   const windowDimension$ = DOMEvents.resize(win)
     .map(e => dimensions(e.target))
     .startWith(dimensions(win));
 
-  const comicContainer$ = Observable
+  const gridSpec$ = Observable
     .combineLatest(
-      [ windowDimension$, imageDimension$ ],
-      fullScreenGridSpec
-    )
-    .flatMap(gridCells)
-    .do(x => console.dir(x));
-
-  /*
-  const animatedComicBackground = Observable
-    .combineLatest(
-      [ comicContainer$ ],
-      (comicContainer) => ({
-        comicContainer
+      [ windowDimension$, spritesSourceData$ ],
+      (windowDimension, spritesSourceData) => ({
+        windowDimension,
+        cellDimension: spritesSourceData.imageDimension
       })
     )
-  */
+    .map(x => fullScreenGridSpec(x.windowDimension, x.cellDimension))
+    .share();
 
-  comicContainer$.subscribe(comicContainer => {
-      $container._.contents(comicContainer);
+  const requiredSpritesCount$ = Observable
+    .combineLatest(
+      [gridSpec$, spritesSourceData$],
+      (gridSpec, spriteSourceData) => ({
+        requiredComics: gridSpec.cells.count,
+        comicsPerSprite: spriteSourceData.imageCoords.length
+      })
+    )
+    .map(x => {
+      return Math.round(x.requiredComics / x.comicsPerSprite)
+          // We add an extra sprite sheet if there is a remainder to make
+          // sure we will request enough sprite sheets.
+          + ((x.requiredComics % x.comicsPerSprite > 0) ? 1 : 0);
     });
 
-  /*
-  const comicElement$ = Observable
+  const loadedSpriteUrl$ = Observable
     .combineLatest(
-      [spriteUrl$, spriteDimension$, imageCoords$, pixelDensity$],
-      calculateComicElements
-    );
+      [ spritesSourceData$, requiredSpritesCount$ ],
+      getEnoughSpriteUrls
+    )
+    .concatAll()
+    // Fetch a sprite by creating in-memory Image elements.
+    .flatMap(imageEl)
+    // Return the url for the loaded sprite.
+    .map(i => i.src);
 
-  comicElement$.subscribe(x => appendChildren($holding, x));
-  */
+  const comic$ = Observable
+    .combineLatest(
+      [spritesSourceData$, gridSpec$, loadedSpriteUrl$],
+      (spritesSourceData, gridSpec, spriteUrl) => ({
+        spriteUrl,
+        spriteDimension: spritesSourceData.spriteDimension,
+        cellDimension: spritesSourceData.imageDimension,
+        imageCoords: spritesSourceData.imageCoords
+      })
+    )
+    .flatMap(x =>
+      x.imageCoords.map(ic =>
+        comicEl(x.spriteUrl, x.spriteDimension, x.cellDimension, ic))
+    )
+    .do(x => console.dir(x));
+
+  const gridCell$ = gridSpec$
+    .flatMap(gridCells);
+
+  const comicCell$ = Observable
+    .zip(
+      [gridCell$, comic$],
+      (gridCell, comic) => {
+        const result = appendChildren(gridCell, comic);
+        return result;
+      })
+    .do(x => console.dir(x));
+
+  comicCell$.subscribe(comicCell => {
+      $container._.contents(comicCell);
+    });
 }

@@ -18,8 +18,12 @@ html, body {
   z-index: 2;
 }
 
-.comic {
-  border: solid 1px red;
+.comicCell {
   position: absolute;
   z-index: 3;
+}
+
+.comic {
+  position: relative;
+  z-index: 4;
 }

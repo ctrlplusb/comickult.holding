@@ -13,7 +13,6 @@
   "dependencies": {
     "blissfuljs": "^1.0.0",
     "normalize.css": "^3.0.3",
-    "ramda": "^0.19.1",
     "rx": "^4.0.7",
     "rx-dom": "^7.0.3",
     "rx-dom-events": "^7.0.3"

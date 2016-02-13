@@ -1,4 +1,4 @@
-import 'normalize.css';
+// import 'normalize.css';
 import 'blissfuljs';
 import comics from './comics.js';
 

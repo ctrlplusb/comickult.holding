@@ -1,6 +1,5 @@
+import classie from 'desandro-classie';
 import { Observable } from 'rx';
-import { DOM } from 'rx-dom';
-import { DOM as DOMEvents } from 'rx-dom-events';
 import { shuffle } from './utils/array';
 
 import './comics.css';
@@ -8,10 +7,68 @@ import './comics.css';
 // blissfuljs global
 const { $ } = window;
 
-function appendChildren($parent, children) {
-  $parent._.contents(children);
+// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          window.oRequestAnimationFrame      ||
+          window.msRequestAnimationFrame     ||
+          function(callback, element){
+              return window.setTimeout(callback, 1000 / 60);
+          };
+})();
 
-  return $parent;
+window.cancelRequestAnimationFrame = (function(){
+  return  window.cancelRequestAnimationFrame       ||
+          window.webkitCancelRequestAnimationFrame ||
+          window.mozCancelRequestAnimationFrame    ||
+          window.oCancelRequestAnimationFrame      ||
+          window.mscancelRequestAnimationFrame     ||
+          window.clearTimeout
+})();
+
+// Returns a random integer between min (included) and max (excluded)
+// Using Math.round() will give you a non-uniform distribution!
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function paintGrid($container, grid, speed) {
+  const { rows } = grid;
+
+  grid.cells
+    .filter(c => c.animationState.fadeDown)
+    .forEach(c => {
+      const newOpac = c.animationState.fadeDownCurrentOpacity - 0.01;
+      c.html.children[0]._.set({ style: { opacity: newOpac } });
+
+      if (newOpac <= 0.3) {
+        c.animationState.fadeDown = false;
+        c.animationState.fadeDownCurrentOpacity = 1;
+      } else {
+        c.animationState.fadeDownCurrentOpacity = newOpac;
+      }
+    })
+
+  rows.forEach(r => {
+    const height = r.dimension.height;
+
+    r.state.top -= speed;
+
+    if (r.state.top < (height * -1)) {
+      r.state.top = ((rows.length - 1) * height);
+    }
+  });
+
+  rows.forEach(r => { r.html.style.top = `${r.state.top}px`; });
+
+  if (!grid.rendered) {
+    console.log('rendering grid');
+    $container.innerHTML = '';
+    $container._.contents(rows.map(r => r.html));
+    grid.rendered = true;
+  }
 }
 
 let delayCount = 1;
@@ -36,25 +93,6 @@ function imageEl(imgUrl) {
   });
   // NOTE: for dev testing
   //.delay(new Date(Date.now() + (1000 * delayCount)));
-}
-
-// :: (Url, Dimensions, Coords) -> SpriteDomElement
-function comicEl(spriteUrl, spriteDimension, cellDimension, imageCoords) {
-  const { w: sw, h: sh } = spriteDimension;
-  const { x, y } = imageCoords;
-  const { w, h } = cellDimension;
-
-  return $.create('div', {
-    className: 'comic',
-    style: {
-      backgroundImage: `url(${spriteUrl})`,
-      backgroundRepeat: 'no-repeat',
-      backgroundPosition: `-${x}px -${y}px`,
-      backgroundSize: `${sw}px ${sh}px`,
-      height: `${h}px`,
-      width: `${w}px`
-    }
-  });
 }
 
 function dimensions(win) {
@@ -106,26 +144,92 @@ function adjustForPixelDensity(density, data) {
   };
 
   const imageCoordsPX = imageCoords.map(c => ({
-      x: c.x / density,
-      y: c.y / density,
-    }));
+    x: c.x / density,
+    y: c.y / density,
+  }));
 
   return Object.assign({}, data, {
     spriteDimension: spriteDimensionPX,
     imageDimension: imageDimensionPX,
     imageCoords: imageCoordsPX
-  }) ;
+  });
+}
+
+function generateRowsAndCells(winDim, gridDef, cellDim) {
+  const rows = [];
+
+  const { dimension: gridDim, colCount, rowCount } = gridDef;
+
+  // Calculate the offset coordinates for the grid based on its extended size.
+  const rowLeftOffset = Math.round((gridDim.width - winDim.w) / 2) * -1;
+
+  // The top/y-coord of a row.
+  let rowY = 0;
+
+  for (let r = 0; r < rowCount; r++) {
+    // Generate the cells for the row.
+    const rowCells = [];
+
+    for (let c = 0; c < colCount; c++) {
+      const left = (c * cellDim.w);
+
+      const cell = {
+        html: $.create('div', {
+          className: 'gridCell',
+          style: {
+            height: `${cellDim.h}px`,
+            left: `${left}px`,
+            width: `${cellDim.w}px`
+          }
+        }),
+        animationState: {
+          fadeDown: false,
+          fadeDownCurrentOpacity: 1
+        }
+      };
+
+      rowCells.push(cell);
+    }
+
+    const row = {
+      id: `row${r}`,
+      cells: rowCells,
+      html: $.create('div', {
+        className: 'gridRow',
+        style: {
+          height: `${cellDim.h}px`,
+          left: `${rowLeftOffset}px`,
+          width: `${gridDim.width}px`,
+        },
+        contents: rowCells.map(rc => rc.html)
+      }),
+      dimension: {
+        height: cellDim.h,
+        width: gridDim.width
+      },
+      state: {
+        top: rowY
+      }
+    };
+
+    rows.push(row);
+
+    // increment the  y-coord for next row
+    rowY += cellDim.h;
+  }
+
+  return rows;
 }
 
 /**
- * Generates a grid specification based on the given window dimensions and
+ * Generates a grid based on the given window dimensions and
  * individual comic dimensions.
  *
  * @param  {Object} winDim   The window dimensions.
  * @param  {Object} cellDim The desired cell dimensions.
  * @return {Object}          The grid specification.
  */
-function fullScreenGridSpec(winDim, cellDim) {
+function generateGrid(winDim, cellDim) {
   // We want our grid to take up the full display so we will add extra cols/rows
   // to the grid in order to ensure that there will be no whitespace.  As a
   // side effect of doing so we may need to negative offset our grid slightly
@@ -142,93 +246,126 @@ function fullScreenGridSpec(winDim, cellDim) {
       // we add an extra column if there is a remainder on the column division.
       + ((winDim.w % cellDim.w > 0) ? 1 : 0);
 
-  // Calculate and return the grid total dimensions.
-  const dimensions = {
-    height: rowCount * cellDim.h,
-    width: colCount * cellDim.w
+  // Calculate the grid total dimensions.
+  const gridDef = {
+    dimension: {
+      height: rowCount * cellDim.h,
+      width: colCount * cellDim.w
+    },
+    rowCount,
+    colCount
   };
 
-  // Calculate the offset coordinates for the grid based on its extended size.
-  const offset = {
-    left: Math.round((dimensions.width - winDim.w) / 2) * -1,
-    top: Math.round((dimensions.height - winDim.h) / 2) * -1,
-  }
+  const rows = generateRowsAndCells(winDim, gridDef, cellDim);
+
+  const allCells = rows.reduce((prev, cur) => {
+    cur.cells.forEach(c => prev.push(c));
+    return prev;
+  }, []);
 
   return {
-    dimensions,
-    offset,
-    cells: {
-      count: rowCount * colCount,
-      rowCount,
-      colCount,
-      dimensions: {
-        width: cellDim.w,
-        height: cellDim.h
-      }
+    rendered: false,
+    cellsFull: false,
+    cells: shuffle(allCells),
+    rows,
+    animationState: {
+      halfPointInitialised: false,
+      nextComicIndex: 0,
+      nextCellIndex: 0
     }
   };
 }
 
-// :: GridDefinition -> Observable [GridNodeElement]
-function gridCells(gridSpec) {
-  const {
-    offset: {
-      left: offsetLeft,
-      top: offsetTop
-    },
-    cells: {
-      rowCount,
-      colCount,
-      dimensions: {
-        width,
-        height
-      }
+// :: (Url, Dimensions, Coords) -> SpriteDomElement
+function comicEl(comicData) {
+  const { w: sw, h: sh } = comicData.sprite.dimension;
+  const { x, y } = comicData.image.coord;
+  const { w, h } = comicData.image.dimension;
+
+  return $.create('div', {
+    className: 'comic',
+    style: {
+      backgroundImage: `url(${comicData.sprite.url})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: `-${x}px -${y}px`,
+      backgroundSize: `${sw}px ${sh}px`,
+      position: 'relative',
+      height: `${h}px`,
+      width: `${w}px`
     }
-  } = gridSpec;
-
-  const gridElements = [];
-
-  for (let r = 0; r < rowCount; r++)
-  for (let c = 0; c < colCount; c++) {
-    const left = (c * width) + offsetLeft;
-    const top = (r * height) + offsetTop;
-
-    gridElements.push($.create('div', {
-      className: 'comicCell',
-      style: {
-        height: `${height}px`,
-        left: `${left}px`,
-        top: `${top}px`,
-        width: `${width}px`
-      }
-    }));
-  }
-
-  // We return a shuffled set of the grid elements as this will allow us
-  // to mount the images in a "random" manner.
-  return Observable.from(shuffle(gridElements));
+  });
 }
 
-function getEnoughSpriteUrls(spritesSourceData, requiredSpritesCount) {
-  const { spriteUrls: urls } = spritesSourceData;
-  const required = [];
-
-  while (required.length < requiredSpritesCount) {
-    for (let i = 0; i < urls.length; i++) {
-      required.push(urls[i]);
-      if (required.length === requiredSpritesCount) {
-        break;
-      }
-    }
+function getComics(grid$, spriteData$) {
+  function getRequiredSpritesCount(grid$, spriteData$) {
+    return Observable
+      .combineLatest(
+        [grid$, spriteData$],
+        (grid, spriteData) => ({
+          requiredComics: grid.cells.length,
+          spriteComicCount: spriteData.imageCoords.length
+        })
+      )
+      .map(x => Math.ceil(x.requiredComics / x.spriteComicCount) + 2);
   }
 
-  return Observable.from(required);
+  const requiredSprites$ = getRequiredSpritesCount(grid$, spriteData$);
+
+  const fetchedSprites$ = Observable
+    .combineLatest(
+      [spriteData$, requiredSprites$],
+      (spriteData, requiredSprites) => {
+        const { spriteUrls: urls } = spriteData;
+        const enoughSprites = [];
+
+        while (enoughSprites.length < requiredSprites) {
+          for (let i = 0; i < urls.length; i++) {
+            enoughSprites.push(urls[i]);
+            if (enoughSprites.length === requiredSprites) {
+              break;
+            }
+          }
+        }
+
+        return Observable.from(enoughSprites);
+      }
+    )
+    .concatAll()
+    // Fetch a sprite by creating in-memory Image elements.
+    .flatMap(imageEl)
+    // Return the url for the loaded sprite.
+    .map(i => i.src);
+
+  return Observable
+    .combineLatest(
+      [spriteData$, fetchedSprites$],
+      (spriteData, fetchedSprite) => ({
+        spriteData,
+        sprite: {
+          url: fetchedSprite,
+          dimension: spriteData.spriteDimension
+        }
+      })
+    )
+    .flatMap(x =>
+      x.spriteData.imageCoords.map(imageCoord => ({
+        sprite: x.sprite,
+        image: {
+          coord: imageCoord,
+          dimension: x.spriteData.imageDimension
+        }
+      }))
+    );
 }
 
-export default function comics(win, $container, pixelDensity) {
+export default function AnimatedComicBackground(win, $container, pixelDensity) {
   const pixelDensity$ = Observable.from([pixelDensity]);
 
-  const spritesSourceData$ = pixelDensity$
+  const windowDimension$ = Observable.fromEvent(win, 'resize')
+    .map(e => dimensions(e.target))
+    .startWith(dimensions(win));
+
+  const spriteData$ = pixelDensity$
     .map(p => {
       let jsonFileName;
 
@@ -240,80 +377,165 @@ export default function comics(win, $container, pixelDensity) {
 
       return `/assets/sprites/${jsonFileName}.json`;
     })
-    .flatMap(url => DOM.getJSON(url))
-    .map(data => adjustForPixelDensity(pixelDensity, data))
+    .flatMap(url => $.fetch(url, { responseType: 'json' }))
+    .map(data => adjustForPixelDensity(pixelDensity, data.response))
     .share();
 
-  const windowDimension$ = DOMEvents.resize(win)
-    .map(e => dimensions(e.target))
-    .startWith(dimensions(win));
-
-  const gridSpec$ = Observable
+  const grid$ = Observable
     .combineLatest(
-      [ windowDimension$, spritesSourceData$ ],
-      (windowDimension, spritesSourceData) => ({
+      [windowDimension$, spriteData$],
+      (windowDimension, spriteData) => ({
         windowDimension,
-        cellDimension: spritesSourceData.imageDimension
+        cellDimension: spriteData.imageDimension
       })
     )
-    .map(x => fullScreenGridSpec(x.windowDimension, x.cellDimension))
+    .map(x => generateGrid(x.windowDimension, x.cellDimension))
     .share();
 
-  const requiredSpritesCount$ = Observable
-    .combineLatest(
-      [gridSpec$, spritesSourceData$],
-      (gridSpec, spriteSourceData) => ({
-        requiredComics: gridSpec.cells.count,
-        comicsPerSprite: spriteSourceData.imageCoords.length
-      })
-    )
-    .map(x => {
-      return Math.round(x.requiredComics / x.comicsPerSprite)
-          // We add an extra sprite sheet if there is a remainder to make
-          // sure we will request enough sprite sheets.
-          + ((x.requiredComics % x.comicsPerSprite > 0) ? 1 : 0);
-    });
+  const comicsData$ = getComics(grid$, spriteData$);
 
-  const loadedSpriteUrl$ = Observable
-    .combineLatest(
-      [ spritesSourceData$, requiredSpritesCount$ ],
-      getEnoughSpriteUrls
-    )
-    .concatAll()
-    // Fetch a sprite by creating in-memory Image elements.
-    .flatMap(imageEl)
-    // Return the url for the loaded sprite.
-    .map(i => i.src);
+  const bgData$ = Observable
+    .combineLatest([grid$, comicsData$], (grid, comicData) => ({ grid, comicData }))
+    .scan((acc, next) => {
+      const { grid, comicData } = next;
+      acc.grid = grid;
+      acc.comicsData.push(comicData);
+      return acc;
+    }, { grid: null, comicsData: [] });
 
-  const comic$ = Observable
-    .combineLatest(
-      [spritesSourceData$, gridSpec$, loadedSpriteUrl$],
-      (spritesSourceData, gridSpec, spriteUrl) => ({
-        spriteUrl,
-        spriteDimension: spritesSourceData.spriteDimension,
-        cellDimension: spritesSourceData.imageDimension,
-        imageCoords: spritesSourceData.imageCoords
-      })
-    )
-    .flatMap(x =>
-      x.imageCoords.map(ic =>
-        comicEl(x.spriteUrl, x.spriteDimension, x.cellDimension, ic))
-    )
-    .do(x => console.dir(x));
+  let windowAnimationRequest = null;
 
-  const gridCell$ = gridSpec$
-    .flatMap(gridCells);
+  bgData$.subscribe(data => {
+    const { grid, comicsData } = data;
 
-  const comicCell$ = Observable
-    .zip(
-      [gridCell$, comic$],
-      (gridCell, comic) => {
-        const result = appendChildren(gridCell, comic);
-        return result;
-      })
-    .do(x => console.dir(x));
+    // We want to set 50% of the comics to be available before we render.  Then
+    // we will render the grid.
+    const totalGridCells = grid.cells.length;
+    const halfPoint = Math.round(totalGridCells / 2);
 
-  comicCell$.subscribe(comicCell => {
-      $container._.contents(comicCell);
-    });
+    if (!grid.animationState.halfPointInitialised
+       && comicsData.length >= halfPoint) {
+      // Let's begin!
+
+      for (let i = 0; i < halfPoint; i++) {
+        const comicData = comicsData[i];
+        const comic = comicEl(comicData);
+        const cell = grid.cells[i];
+        classie.add(comic, 'faded');
+        cell.html._.contents(comic);
+
+        grid.animationState.nextComicIndex++;
+        grid.animationState.nextCellIndex++;
+      }
+
+      grid.animationState.halfPointInitialised = true;
+
+      const startNewComicTimer = () => {
+        setTimeout(() => {
+          // first get the next comic
+          let nextComicIndex = grid.animationState.nextComicIndex;
+          if (nextComicIndex >= comicsData.length) {
+            nextComicIndex = 0;
+            grid.animationState.nextComicIndex = 0;
+          }
+          const comicData = comicsData[nextComicIndex];
+          const comic = comicEl(comicData);
+
+          // now get the next cell
+          let nextCellIndex = grid.animationState.nextCellIndex;
+          if (nextCellIndex >= grid.cells.length) {
+            nextCellIndex = 0;
+            grid.animationState.nextCellIndex = 0;
+          }
+          const cell = grid.cells[nextCellIndex];
+
+          cell.html.innerHTML = '';
+          cell.html._.contents(comic);
+          cell.animationState.fadeDown = true;
+
+          grid.animationState.nextComicIndex++;
+          grid.animationState.nextCellIndex++;
+
+          startNewComicTimer();
+        }, getRandomInt(400, 800));
+      };
+
+      const randomTimeNewComic = () => {
+        setTimeout(() => {
+          startNewComicTimer();
+        }, getRandomInt(100, 400));
+      };
+
+      for (let i = 0; i < 4; i++) {
+        randomTimeNewComic();
+      }
+
+      /*
+      if (!grid.cellsFull) {
+        const emptyCells = grid.cells.filter(c => c.hasContent === false);
+
+        if (emptyCells.length === 0) {
+          grid.cellsFull = true;
+        } else {
+          emptyCells[0].html._.contents(comic);
+          emptyCells[0].hasContent = true;
+        }
+      }
+      */
+    }
+
+    const startAnimation = () => {
+      const fps = 30;
+      const interval = 1000 / fps;
+      let then = new Date().getTime();
+      let oldtime = 0;
+
+      return (function loop(time) {
+        windowAnimationRequest = requestAnimationFrame(loop);
+
+        const now = new Date().getTime();
+        const delta = now - then;
+
+        if (delta > interval) {
+          // update time stuffs
+          then = now - (delta % interval);
+
+          // calculate the frames per second
+          const actualFPS = 1000 / (time - oldtime);
+          oldtime = time;
+
+          const speed = 1;
+          paintGrid($container, grid, speed);
+        }
+      }(0));
+
+      /*
+      // Now, schedule in our animations
+      const animationFrame = () => {
+        const speed = 0.01;
+        paintGrid($container, grid, speed);
+
+        windowAnimationRequest = window.requestAnimationFrame(animationFrame);
+      };
+
+      windowAnimationRequest = window.requestAnimationFrame(animationFrame);
+      */
+    };
+
+    if (!grid.animationState.animationStarted) {
+      grid.animationState.animationStarted = true;
+
+      // First cancel any animations, this could happen due to grid resize, so
+      // a new grid would be passed in without the animationStarted flag set.
+      if (windowAnimationRequest) {
+        window.cancelAnimationFrame(windowAnimationRequest);
+
+        setTimeout(() => {
+          startAnimation();
+        }, 1000);
+      } else {
+        startAnimation();
+      }
+    }
+  });
 }

@@ -1,7 +1,6 @@
 import path from 'path';
 import webpack from 'webpack';
 import ExtractTextPlugin from 'extract-text-webpack-plugin';
-import autoprefixer from 'autoprefixer';
 
 export default {
   entry: [
@@ -23,8 +22,8 @@ export default {
     new ExtractTextPlugin('holding.css', { allChunks: true }),
     new webpack.optimize.OccurenceOrderPlugin()
   ],
-  postcss: [
-    autoprefixer({ browsers: ['last 2 versions'] })
+  postcss: () => [
+    require('autoprefixer')({ browsers: ['last 3 versions'] })
   ],
   module: {
     loaders: [

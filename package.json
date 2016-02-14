@@ -13,11 +13,7 @@
   "dependencies": {
     "blissfuljs": "^1.0.1",
     "desandro-classie": "^1.0.1",
-    "most": "^0.18.0",
-    "normalize.css": "^3.0.3",
-    "rx": "^4.0.7",
-    "rx-dom": "^7.0.3",
-    "rx-dom-events": "^7.0.3"
+    "rx": "^4.0.7"
   },
   "devDependencies": {
     "autoprefixer": "^6.3.2",

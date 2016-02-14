@@ -1,0 +1,62 @@
+.background {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.loading {
+  background: #000;
+  color: #FFF;
+  font-family: 'Calgary', Arial, sans-serif;
+  font-size: 40px;
+  height: 100%;
+  opacity: 1;
+  overflow: hidden;
+  position: absolute;
+  text-align: center;
+  transition: opacity 1.5s;
+  width: 100%;
+  z-index: 99;
+}
+
+.loading.fade {
+  opacity: 0;
+}
+
+.loading span {
+  bottom: 40px;
+  position: absolute;
+  right: 40px;
+}
+
+.comicGrid {
+  position: absolute;
+  z-index: 2;
+  height: 100%;
+  width: 100%;
+}
+
+.gridRow {
+  position: absolute;
+  z-index: 3;
+}
+
+.gridCell {
+  position: absolute;
+  z-index: 4;
+}
+
+.comic {
+  z-index: 5;
+}
+
+.spotlight {
+  background-image: radial-gradient(circle closest-side, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.6) 60%);
+  position: absolute;
+  z-index: 6;
+  height: 100%;
+  width: 100%;
+  display: flex;
+}

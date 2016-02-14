@@ -9,6 +9,38 @@
   <meta name="description" content="The dotted line.">
   <meta name="author" content="comickult">
 
+  <style type="text/css">
+    @font-face {
+      font-family: 'Proxima';
+      src:
+        /* IE6-IE9 */
+        url('./assets/fonts/proximanova-regular-webfont.eot') format('embedded-opentype'),
+        /* Super Modern Browsers */
+        url('./assets/fonts/proximanova-regular-webfont.woff2') format('woff2'),
+        /* Pretty Modern Browsers */
+        url('./assets/fonts/proximanova-regular-webfont.woff') format('woff'),
+        /* Safari, Android, iOS */
+        url('./assets/fonts/proximanova-regular-webfont.ttf') format('truetype'),
+        /* Legacy iOS */
+        url('./assets/fonts/proximanova-regular-webfont.svg') format('svg');
+    }
+
+    @font-face {
+      font-family: 'Calgary';
+      src:
+        /* IE6-IE9 */
+        url('./assets/fonts/calgary_script-webfont.eot') format('embedded-opentype'),
+        /* Super Modern Browsers */
+        url('./assets/fonts/calgary_script-webfont.woff2') format('woff2'),
+        /* Pretty Modern Browsers */
+        url('./assets/fonts/calgary_script-webfont.woff') format('woff'),
+        /* Safari, Android, iOS */
+        url('./assets/fonts/calgary_script-webfont.ttf') format('truetype'),
+        /* Legacy iOS */
+        url('./assets/fonts/calgary_script-webfont.svg') format('svg');
+    }
+  </style>
+
   <link rel="stylesheet" type="text/css" href="/assets/js/holding.css">
 
   <!--
@@ -18,14 +50,18 @@
 </head>
 
 <body>
-  <div class="holdingApp">
+  <div class="background">
+    <div id="loading" class="loading">
+      <span>loading...</span>
+    </div>
+
     <div class="comicGrid"></div>
 
     <div class="spotlight"></div>
+  </div>
 
-    <div class="content">
-      <h1 class="logo">Comickult</h1>
-    </div>
+  <div class="content">
+    <h1 class="logo">Comickult</h1>
   </div>
 
   <!-- Core Scripts -->

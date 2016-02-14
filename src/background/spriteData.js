@@ -1,8 +1,13 @@
-const spriteData = {
-  pixelDensity_1: {
+const spriteData = [
+  {
+    pixelDensity: 1,
     spriteUrls: [
       '/assets/sprites/comics01.jpg',
-      '/assets/sprites/comics02.jpg'
+      '/assets/sprites/comics02.jpg',
+      '/assets/sprites/comics03.jpg',
+      '/assets/sprites/comics04.jpg',
+      '/assets/sprites/comics05.jpg',
+      '/assets/sprites/comics06.jpg'
     ],
     spriteDimension: { w: 400, h: 450 },
     imageDimension: { w: 100, h: 150 },
@@ -23,10 +28,15 @@ const spriteData = {
       /* eslint-enable */
     ]
   },
-  pixelDensity_2: {
+  {
+    pixelDensity: 2,
     spriteUrls: [
       '/assets/sprites/comics01@2x.jpg',
-      '/assets/sprites/comics02@2x.jpg'
+      '/assets/sprites/comics02@2x.jpg',
+      '/assets/sprites/comics03@2x.jpg',
+      '/assets/sprites/comics04@2x.jpg',
+      '/assets/sprites/comics05@2x.jpg',
+      '/assets/sprites/comics06@2x.jpg'
     ],
     spriteDimension: { w: 400, h: 450 },
     imageDimension: { w: 100, h: 150 },
@@ -46,5 +56,7 @@ const spriteData = {
       { x: 300, y: 300 }
       /* eslint-enable */
     ]
-  },
-};
+  }
+];
+
+export default spriteData;

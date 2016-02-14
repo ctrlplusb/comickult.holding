@@ -1,9 +1,9 @@
-// import 'normalize.css';
+// Polyfills
+import './polyfills/requestAnimation';
 import 'blissfuljs';
-import comics from './comics.js';
+import background from './background';
 
-// The blissfuljs mounted global.
-const { $ } = window;
+import './main.css';
 
 /**
  * Get the current window pixel density. We'll default it to a
@@ -13,5 +13,5 @@ const { $ } = window;
  */
 const pixelDensity = window.devicePixelRatio || 2;
 
-const comicContainer = $('.comicGrid');
-comics(window, comicContainer, pixelDensity);
+// Initialise the animated background.
+background(window, pixelDensity);

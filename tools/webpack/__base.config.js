@@ -48,7 +48,7 @@ export default {
        * bundle.
        */
       {
-        test: /\.(png|jpg|jpeg|gif|ico|svg|mp4|webm)$/,
+        test: /\.(png|jpg|jpeg|gif|ico|mp4|webm)$/,
         // Any file below or equal to 10K will be converted to inline base64.
         loader: 'url-loader?limit=10240'
       }

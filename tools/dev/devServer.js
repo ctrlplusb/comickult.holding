@@ -2,6 +2,7 @@ import path from 'path';
 import express from 'express';
 import webpack from 'webpack';
 import config from '../../webpack.config.babel';
+import serveStatic from 'serve-static';
 
 const root = path.join(__dirname, '../../dist');
 const app = express();
@@ -14,13 +15,17 @@ app.use(require('webpack-dev-middleware')(compiler, {
 
 app.use(require('webpack-hot-middleware')(compiler));
 
+app.use(serveStatic(`${root}`));
+
+/*
+app.use(serveStatic(`${root}/assets/img`));
+app.use(serveStatic(`${root}/assets/sprites`));
+app.use(serveStatic(`${root}/assets/fonts`));
+
 app.get('*', (req, res) => {
-  if (req.originalUrl.match(/^\/assets\/(img|sprites)\//)) {
-    res.sendFile(root + req.originalUrl);
-  } else {
-    res.sendFile(root + '/index.html');
-  }
+  res.sendFile(root + '/index.html');
 });
+*/
 
 app.listen(3000, 'localhost', (err) => {
   if (err) {

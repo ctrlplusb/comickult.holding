@@ -27,7 +27,7 @@ function updateGrid($container, grid, speed) {
 
   grid.cells
     .filter(c => c.animationState.fadeDown)
-    .forEach(c => {
+    .forEach((c) => {
       const newOpac = c.animationState.fadeDownCurrentOpacity - 0.01;
       c.html.children[0]._.set({ style: { opacity: newOpac } });
 
@@ -39,7 +39,8 @@ function updateGrid($container, grid, speed) {
       }
     });
 
-  rows.forEach(r => {
+  // Calculate new positions for rows
+  rows.forEach((r) => {
     const height = r.dimension.height;
 
     r.state.top -= speed;
@@ -49,7 +50,7 @@ function updateGrid($container, grid, speed) {
     }
   });
 
-  rows.forEach(r => { r.html.style.top = `${r.state.top}px`; });
+  rows.forEach((r) => { r.html.style.top = `${r.state.top}px`; });
 
   if (!grid.rendered) {
     $container.innerHTML = '';
@@ -61,15 +62,15 @@ function updateGrid($container, grid, speed) {
 function renderGrid(grid, comicsData, halfPoint) {
   const $gridContainer = $('.comicGrid');
 
-  for (let i = 0; i < halfPoint; i++) {
+  for (let i = 0; i < halfPoint; i += 1) {
     const comicData = comicsData[i];
     const comic = comicEl(comicData);
     const cell = grid.cells[i];
     comic._.set({ style: { opacity: comicLowOpacity } });
     cell.html._.contents(comic);
 
-    grid.animationState.nextComicIndex++;
-    grid.animationState.nextCellIndex++;
+    grid.animationState.nextComicIndex += 1;
+    grid.animationState.nextCellIndex += 1;
   }
 
   grid.animationState.halfPointInitialised = true;
@@ -99,8 +100,8 @@ function renderGrid(grid, comicsData, halfPoint) {
       cell.html._.contents(comic);
       cell.animationState.fadeDown = true;
 
-      grid.animationState.nextComicIndex++;
-      grid.animationState.nextCellIndex++;
+      grid.animationState.nextComicIndex += 1;
+      grid.animationState.nextCellIndex += 1;
 
       startNewComicTimer();
     }, getRandomInt(400, 800));
@@ -112,12 +113,12 @@ function renderGrid(grid, comicsData, halfPoint) {
     }, getRandomInt(100, 400));
   };
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 4; i += 1) {
     randomTimeNewComic();
   }
 
   const startAnimation = () => {
-    const fps = 30;
+    const fps = 60;
     const interval = 1000 / fps;
     let then = new Date().getTime();
 
@@ -131,7 +132,7 @@ function renderGrid(grid, comicsData, halfPoint) {
         // update time stuffs
         then = now - (delta % interval);
 
-        const speed = 1;
+        const speed = 0.5;
         updateGrid($gridContainer, grid, speed);
       }
     }(0));
@@ -162,7 +163,7 @@ function background(win, pixelDensity) {
     .startWith(dimensions(win));
 
   const spriteData$ = pixelDensity$
-    .map(p => {
+    .map((p) => {
       let sd;
 
       if (p > 1) {
@@ -197,7 +198,7 @@ function background(win, pixelDensity) {
       return acc;
     }, { grid: null, comicsData: [] });
 
-  bgData$.subscribe(data => {
+  bgData$.subscribe((data) => {
     const { grid, comicsData } = data;
 
     // We want to set 50% of the comics to be available before we render.  Then

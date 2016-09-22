@@ -104,13 +104,13 @@ function renderGrid(grid, comicsData, halfPoint) {
       grid.animationState.nextCellIndex += 1;
 
       startNewComicTimer();
-    }, getRandomInt(400, 800));
+    }, getRandomInt(400, 1300));
   };
 
   const randomTimeNewComic = () => {
     setTimeout(() => {
       startNewComicTimer();
-    }, getRandomInt(100, 400));
+    }, getRandomInt(100, 800));
   };
 
   for (let i = 0; i < 4; i += 1) {

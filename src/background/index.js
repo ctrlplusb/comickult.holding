@@ -23,9 +23,10 @@ let windowAnimationRequest = null;
 const comicLowOpacity = 0.3;
 
 function updateGrid($container, grid, speed) {
-  const { rows } = grid;
+  const { cells, gridDef } = grid;
 
-  grid.cells
+  // Calculate the opacity
+  cells
     .filter(c => c.animationState.fadeDown)
     .forEach((c) => {
       const newOpac = c.animationState.fadeDownCurrentOpacity - 0.01;
@@ -39,22 +40,20 @@ function updateGrid($container, grid, speed) {
       }
     });
 
-  // Calculate new positions for rows
-  rows.forEach((r) => {
-    const height = r.dimension.height;
+  // Calculate new positions
+  cells.forEach((c) => {
+    c.animationState.top -= (speed - c.animationState.colSpeedMod);
 
-    r.state.top -= speed;
-
-    if (r.state.top < (height * -1)) {
-      r.state.top = ((rows.length - 1) * height);
+    if (c.animationState.top < (c.dimension.height * -1)) {
+      c.animationState.top = gridDef.dimension.height - c.dimension.height;
     }
   });
 
-  rows.forEach((r) => { r.html.style.top = `${r.state.top}px`; });
+  cells.forEach((c) => { c.html.style.top = `${c.animationState.top}px`; });
 
   if (!grid.rendered) {
     $container.innerHTML = '';
-    $container._.contents(rows.map(r => r.html));
+    $container._.contents(cells.map(r => r.html));
     grid.rendered = true;
   }
 }
@@ -68,6 +67,7 @@ function renderGrid(grid, comicsData, halfPoint) {
     const cell = grid.cells[i];
     comic._.set({ style: { opacity: comicLowOpacity } });
     cell.html._.contents(comic);
+    cell.comic = comic;
 
     grid.animationState.nextComicIndex += 1;
     grid.animationState.nextCellIndex += 1;
@@ -86,7 +86,6 @@ function renderGrid(grid, comicsData, halfPoint) {
         grid.animationState.nextComicIndex = 0;
       }
       const comicData = comicsData[nextComicIndex];
-      const comic = comicEl(comicData);
 
       // now get the next cell
       let nextCellIndex = grid.animationState.nextCellIndex;
@@ -96,8 +95,14 @@ function renderGrid(grid, comicsData, halfPoint) {
       }
       const cell = grid.cells[nextCellIndex];
 
-      cell.html.innerHTML = '';
-      cell.html._.contents(comic);
+      if (!cell.comic) {
+        cell.html.innerHTML = '';
+        const comic = comicEl(comicData);
+        cell.html._.contents(comic);
+      } else {
+        cell.comic.style.backgroundImage = `url(${comicData.sprite.url})`;
+      }
+
       cell.animationState.fadeDown = true;
 
       grid.animationState.nextComicIndex += 1;

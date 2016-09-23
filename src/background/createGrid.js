@@ -1,24 +1,28 @@
 import { shuffle } from '../utils/array';
+import { getRandomInt } from '../utils/math';
 
 // blissfuljs global
 const { $ } = window;
 
-function generateRowsAndCells(winDim, gridDef, cellDim) {
-  const rows = [];
+function generateCells(winDim, gridDef, cellDim) {
+  const cells = [];
 
   const { dimension: gridDim, colCount, rowCount } = gridDef;
 
   // Calculate the offset coordinates for the grid based on its extended size.
   const rowLeftOffset = Math.round((gridDim.width - winDim.w) / 2) * -1;
 
-  // The top/y-coord of a row.
-  let rowY = 0;
+  // Generate animation speed mods for each col.
+  const colSpeedMods = [];
+  for (let r = 0; r < colCount; r += 1) {
+    const colSpeedMod = getRandomInt(1, 3) / 10;
+    colSpeedMods.push(colSpeedMod);
+  }
 
-  for (let r = 0; r < rowCount; r++) {
-    // Generate the cells for the row.
-    const rowCells = [];
+  for (let r = 0; r < rowCount; r += 1) {
+    const ycoord = r * cellDim.h;
 
-    for (let c = 0; c < colCount; c++) {
+    for (let c = 0; c < colCount; c += 1) {
       const left = (c * cellDim.w);
 
       const cell = {
@@ -26,47 +30,27 @@ function generateRowsAndCells(winDim, gridDef, cellDim) {
           className: 'gridCell',
           style: {
             height: `${cellDim.h}px`,
-            left: `${left}px`,
+            left: `${left + rowLeftOffset}px`,
             width: `${cellDim.w}px`
           }
         }),
+        dimension: {
+          height: cellDim.h,
+          width: cellDim.w
+        },
         animationState: {
           fadeDown: false,
-          fadeDownCurrentOpacity: 1
+          fadeDownCurrentOpacity: 1,
+          top: ycoord,
+          colSpeedMod: colSpeedMods[c]
         }
       };
 
-      rowCells.push(cell);
+      cells.push(cell);
     }
-
-    const row = {
-      id: `row${r}`,
-      cells: rowCells,
-      html: $.create('div', {
-        className: 'gridRow',
-        style: {
-          height: `${cellDim.h}px`,
-          left: `${rowLeftOffset}px`,
-          width: `${gridDim.width}px`,
-        },
-        contents: rowCells.map(rc => rc.html)
-      }),
-      dimension: {
-        height: cellDim.h,
-        width: gridDim.width
-      },
-      state: {
-        top: rowY
-      }
-    };
-
-    rows.push(row);
-
-    // increment the  y-coord for next row
-    rowY += cellDim.h;
   }
 
-  return rows;
+  return cells;
 }
 
 /**
@@ -104,23 +88,18 @@ function grid(winDim, cellDim) {
     colCount
   };
 
-  const rows = generateRowsAndCells(winDim, gridDef, cellDim);
-
-  const allCells = rows.reduce((prev, cur) => {
-    cur.cells.forEach(c => prev.push(c));
-    return prev;
-  }, []);
+  const cells = generateCells(winDim, gridDef, cellDim);
 
   return {
     rendered: false,
     cellsFull: false,
-    cells: shuffle(allCells),
-    rows,
+    cells: shuffle(cells),
     animationState: {
       halfPointInitialised: false,
       nextComicIndex: 0,
       nextCellIndex: 0
-    }
+    },
+    gridDef
   };
 }
 

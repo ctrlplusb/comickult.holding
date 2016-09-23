@@ -49,7 +49,9 @@ function updateGrid($container, grid, speed) {
     }
   });
 
-  cells.forEach((c) => { c.html.style.top = `${c.animationState.top}px`; });
+  cells.forEach((c) => {
+    c.html.style.transform = `translateY(${c.animationState.top}px)`;
+  });
 
   if (!grid.rendered) {
     $container.innerHTML = '';
